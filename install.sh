@@ -108,6 +108,135 @@ else
         echo "  Done. Skills installed to $SKILL_DIR/"
     fi
 
+    # 3. awesome-claude-code-subagents (https://github.com/VoltAgent/awesome-claude-code-subagents)
+    SUBAGENT_DIR="$CLAUDE_DIR/subagents"
+    mkdir -p "$SUBAGENT_DIR"
+    echo "Installing awesome-claude-code-subagents..."
+    if [ -d "$EXTERNAL_DIR/awesome-claude-code-subagents" ]; then
+        echo "  Updating existing repo..."
+        git -C "$EXTERNAL_DIR/awesome-claude-code-subagents" pull --quiet 2>/dev/null || echo "  Warning: pull failed, using existing version"
+    else
+        git clone --quiet https://github.com/VoltAgent/awesome-claude-code-subagents.git "$EXTERNAL_DIR/awesome-claude-code-subagents" 2>/dev/null || {
+            echo "  Error: Failed to clone awesome-claude-code-subagents. Check network connection."
+        }
+    fi
+    if [ -d "$EXTERNAL_DIR/awesome-claude-code-subagents" ]; then
+        # Copy category directories and agent definitions
+        for dir in "$EXTERNAL_DIR/awesome-claude-code-subagents/"*/; do
+            dir_name="$(basename "$dir")"
+            [ "$dir_name" = ".git" ] && continue
+            [ "$dir_name" = ".github" ] && continue
+            [ "$dir_name" = "node_modules" ] && continue
+            [ -d "$dir" ] && cp -r "$dir" "$SUBAGENT_DIR/" 2>/dev/null
+        done
+        # Copy root-level .md files (README, etc.)
+        cp -r "$EXTERNAL_DIR/awesome-claude-code-subagents/"*.md "$SUBAGENT_DIR/" 2>/dev/null
+        echo "  Done. Subagents installed to $SUBAGENT_DIR/"
+    fi
+
+    # 4. Auto-generate subagent index from installed files
+    echo ""
+    echo "=== Generating Subagent Index ==="
+    INDEX_FILE="$CLAUDE_DIR/subagent-index.md"
+    {
+        echo "# Subagent Index (Auto-Generated)"
+        echo "> 이 파일은 install.sh가 자동 생성합니다. 직접 수정하지 마세요."
+        echo "> 생성일: $(date '+%Y-%m-%d %H:%M:%S')"
+        echo ""
+
+        # Parse VoltAgent subagent .md files (YAML frontmatter: name, description)
+        if [ -d "$SUBAGENT_DIR" ]; then
+            echo "## Available Subagent Types"
+            echo "| name | description | source |"
+            echo "|------|-------------|--------|"
+            find "$SUBAGENT_DIR" -name "*.md" -type f | sort | while read -r mdfile; do
+                # Skip README, CONTRIBUTING, etc.
+                fname="$(basename "$mdfile" .md)"
+                case "$fname" in
+                    README|CONTRIBUTING|LICENSE|CLAUDE|CHANGELOG) continue ;;
+                esac
+                # Extract name and description from YAML frontmatter
+                sa_name=""
+                sa_desc=""
+                in_frontmatter=false
+                while IFS= read -r line; do
+                    if [ "$line" = "---" ]; then
+                        if [ "$in_frontmatter" = true ]; then
+                            break
+                        else
+                            in_frontmatter=true
+                            continue
+                        fi
+                    fi
+                    if [ "$in_frontmatter" = true ]; then
+                        case "$line" in
+                            name:*) sa_name="$(echo "$line" | sed 's/^name:[[:space:]]*//')" ;;
+                            description:*) sa_desc="$(echo "$line" | sed 's/^description:[[:space:]]*//' | cut -c1-80)" ;;
+                        esac
+                    fi
+                done < "$mdfile"
+                # Fallback: use filename as name
+                [ -z "$sa_name" ] && sa_name="$fname"
+                [ -n "$sa_name" ] && echo "| $sa_name | $sa_desc | subagents |"
+            done
+        fi
+
+        # Parse agency-agents (folder-based agents)
+        if [ -d "$AGENT_DIR" ]; then
+            echo ""
+            echo "## Agency Agents"
+            echo "| name | source |"
+            echo "|------|--------|"
+            find "$AGENT_DIR" -name "*.md" -type f | sort | while read -r mdfile; do
+                fname="$(basename "$mdfile" .md)"
+                case "$fname" in
+                    README|CONTRIBUTING|LICENSE|CLAUDE|CHANGELOG) continue ;;
+                esac
+                echo "| $fname | agents |"
+            done
+        fi
+
+        # Parse skills (folder-based, look for SKILL.md)
+        if [ -d "$SKILL_DIR" ]; then
+            echo ""
+            echo "## Skills"
+            echo "| name | description | source |"
+            echo "|------|-------------|--------|"
+            for skill_dir in "$SKILL_DIR"/*/; do
+                [ ! -d "$skill_dir" ] && continue
+                skill_name="$(basename "$skill_dir")"
+                skill_desc=""
+                # Try to read description from SKILL.md frontmatter
+                if [ -f "$skill_dir/SKILL.md" ]; then
+                    in_frontmatter=false
+                    while IFS= read -r line; do
+                        if [ "$line" = "---" ]; then
+                            if [ "$in_frontmatter" = true ]; then
+                                break
+                            else
+                                in_frontmatter=true
+                                continue
+                            fi
+                        fi
+                        if [ "$in_frontmatter" = true ]; then
+                            case "$line" in
+                                description:*) skill_desc="$(echo "$line" | sed 's/^description:[[:space:]]*//' | cut -c1-80)" ;;
+                            esac
+                        fi
+                    done < "$skill_dir/SKILL.md"
+                fi
+                echo "| $skill_name | $skill_desc | skills |"
+            done
+        fi
+    } > "$INDEX_FILE"
+
+    # Count entries
+    subagent_count=$(grep -c "| .* | .* | subagents |" "$INDEX_FILE" 2>/dev/null || echo "0")
+    agent_count=$(grep -c "| .* | agents |" "$INDEX_FILE" 2>/dev/null || echo "0")
+    skill_count=$(grep -c "| .* | .* | skills |" "$INDEX_FILE" 2>/dev/null || echo "0")
+    echo "  Generated: $INDEX_FILE"
+    echo "  Subagents: $subagent_count | Agents: $agent_count | Skills: $skill_count"
+
     echo ""
     echo "External repos cached at: $EXTERNAL_DIR/"
     echo "Re-run install.sh to update to latest versions."
@@ -124,8 +253,9 @@ echo "  /review  - Trigger code review"
 echo "  /finish  - Finalize and merge"
 echo ""
 echo "Installed external skills:"
-echo "  - agency-agents  → ~/.claude/agents/"
-echo "  - claude-skills  → ~/.claude/skills/"
+echo "  - agency-agents       → ~/.claude/agents/"
+echo "  - claude-skills       → ~/.claude/skills/"
+echo "  - claude-subagents    → ~/.claude/subagents/"
 echo ""
 echo "Usage: Open any project and type '/team' to start."
 echo "Backup saved to: $BACKUP_DIR"

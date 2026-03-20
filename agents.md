@@ -1,6 +1,7 @@
 # Agent Registry
 > 소프트웨어 개발용 core 에이전트만 포함. 확장 에이전트(마케팅/영업/게임/학술 등)는 https://github.com/msitarzewski/agency-agents 참조.
 > 사용법: 도메인 확인 → agency-agent 선택 → 매핑된 subagent_type으로 스폰 → 프롬프트에 역할 명시
+> **최신 전체 목록**: `~/.claude/subagent-index.md` (install.sh가 자동 생성, 아래 테이블에 없는 에이전트는 여기서 확인)
 
 ## Engineering
 | Agency Agent | subagent_type | 용도 |

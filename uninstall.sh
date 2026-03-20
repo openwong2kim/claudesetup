@@ -27,6 +27,8 @@ echo ""
 echo "Removing external agent skills..."
 [ -d "$CLAUDE_DIR/agents" ] && rm -rf "$CLAUDE_DIR/agents" && echo "  Removed agents/"
 [ -d "$CLAUDE_DIR/skills" ] && rm -rf "$CLAUDE_DIR/skills" && echo "  Removed skills/"
+[ -d "$CLAUDE_DIR/subagents" ] && rm -rf "$CLAUDE_DIR/subagents" && echo "  Removed subagents/"
+[ -f "$CLAUDE_DIR/subagent-index.md" ] && rm "$CLAUDE_DIR/subagent-index.md" && echo "  Removed subagent-index.md"
 [ -d "$CLAUDE_DIR/.external-repos" ] && rm -rf "$CLAUDE_DIR/.external-repos" && echo "  Removed .external-repos/ (cached repos)"
 
 echo ""
