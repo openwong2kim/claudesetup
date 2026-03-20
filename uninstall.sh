@@ -1,0 +1,29 @@
+#!/bin/bash
+# Claude Code Team Mode Setup Uninstaller
+# Removes team mode files from ~/.claude/ (keeps backups)
+
+set -e
+
+CLAUDE_DIR="$HOME/.claude"
+
+echo "=== Claude Code Team Mode Uninstaller ==="
+echo ""
+
+# Remove installed files
+echo "Removing team mode files..."
+
+[ -f "$CLAUDE_DIR/agents.md" ] && rm "$CLAUDE_DIR/agents.md" && echo "  Removed agents.md"
+
+for cmd in team status resume review finish; do
+    [ -f "$CLAUDE_DIR/commands/$cmd.md" ] && rm "$CLAUDE_DIR/commands/$cmd.md" && echo "  Removed commands/$cmd.md"
+done
+
+for tmpl in decisions progress handoff; do
+    [ -f "$CLAUDE_DIR/templates/$tmpl.md" ] && rm "$CLAUDE_DIR/templates/$tmpl.md" && echo "  Removed templates/$tmpl.md"
+done
+
+echo ""
+echo "Note: CLAUDE.md was NOT removed (may contain other rules)."
+echo "Note: Backups in $CLAUDE_DIR/backups/ were NOT removed."
+echo ""
+echo "=== Uninstall complete ==="
