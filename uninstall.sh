@@ -22,6 +22,13 @@ for tmpl in decisions progress handoff; do
     [ -f "$CLAUDE_DIR/templates/$tmpl.md" ] && rm "$CLAUDE_DIR/templates/$tmpl.md" && echo "  Removed templates/$tmpl.md"
 done
 
+# Remove external agent skills
+echo ""
+echo "Removing external agent skills..."
+[ -d "$CLAUDE_DIR/agents" ] && rm -rf "$CLAUDE_DIR/agents" && echo "  Removed agents/"
+[ -d "$CLAUDE_DIR/skills" ] && rm -rf "$CLAUDE_DIR/skills" && echo "  Removed skills/"
+[ -d "$CLAUDE_DIR/.external-repos" ] && rm -rf "$CLAUDE_DIR/.external-repos" && echo "  Removed .external-repos/ (cached repos)"
+
 echo ""
 echo "Note: CLAUDE.md was NOT removed (may contain other rules)."
 echo "Note: Backups in $CLAUDE_DIR/backups/ were NOT removed."
